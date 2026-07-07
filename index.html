@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Goal-Based Funding Calculator</title>
+
+<!--
+  ANALYTICS (weekly/monthly users):
+  A file on your own computer has no way to know who else opens it - there's
+  no server logging visits. To get real "X people used this this week"
+  numbers, you need to (1) host this file somewhere public - Replit, GitHub
+  Pages, Netlify are all free - and (2) add a free analytics snippet so
+  visits actually get counted.
+
+  GoatCounter (goatcounter.com) is a good fit: free, no cookie-consent
+  banner needed, and gives a dashboard with visits by day/week/month.
+  Steps: sign up at goatcounter.com with a free code (e.g. "myproject"),
+  it gives you one script tag, paste it right before </head> below, and
+  once hosted, every visit shows up on your dashboard.
+
+  Example (yours will have your own code instead of "myproject"):
+  <script data-goatcounter="https://myproject.goatcounter.com/count"
+          async src="//gc.zgo.at/count.js"></script>
+-->
+
+<style>
+  :root {
+    --bg: #12213D;
+    --panel: #182A4A;
+    --text: #EDE6D6;
+    --muted: #9CA9C4;
+    --border: #2A3D63;
+    --gold: #C9A227;
+    --success: #4C9A6A;
+    --warning: #D68A3C;
+    --danger: #B5544A;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: Georgia, 'Times New Roman', serif;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 32px 20px 60px;
+  }
+  h1 {
+    font-size: 26px;
+    font-weight: normal;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+  }
+  p.subtitle {
+    color: var(--muted);
+    font-size: 14px;
+    margin-top: -6px;
+  }
+  .goal-row {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .goal-row-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .goal-row-header input[type="text"] {
+    font-family: Georgia, serif;
+    font-size: 15px;
+    font-weight: bold;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    width: 65%;
+  }
+  .goal-row-header button {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 4px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-family: system-ui, sans-serif;
+    font-size: 12px;
+  }
+  .goal-row-header button:hover { border-color: var(--danger); color: var(--danger); }
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    align-items: stretch;
+  }
+  .field-grid > div {
+    display: flex;
+    flex-direction: column;
+  }
+  .field-grid input[type="number"] {
+    margin-top: auto;
+  }
+  label {
+    display: block;
+    font-family: system-ui, sans-serif;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  input[type="number"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    padding: 6px 8px;
+    border-radius: 4px;
+  }
+  .field-help {
+    font-family: system-ui, sans-serif;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 3px;
+    line-height: 1.4;
+  }
+  .prob-bar-track {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    height: 10px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .prob-bar-fill {
+    height: 100%;
+    border-radius: 20px;
+    transition: width 0.4s ease;
+  }
+  button.primary {
+    background: var(--gold);
+    color: #12213D;
+    border: none;
+    font-family: system-ui, sans-serif;
+    font-weight: bold;
+    font-size: 14px;
+    padding: 12px;
+    border-radius: 6px;
+    width: 100%;
+    cursor: pointer;
+    margin-top: 6px;
+  }
+  button.secondary {
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--muted);
+    font-family: system-ui, sans-serif;
+    font-size: 13px;
+    padding: 10px;
+    border-radius: 6px;
+    width: 100%;
+    cursor: pointer;
+    margin-top: 6px;
+  }
+  #available-savings-block {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+  #results { margin-top: 28px; display: none; }
+  #tradeoff-banner {
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-family: system-ui, sans-serif;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  .result-card {
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    border-left: 4px solid var(--gold);
+    background: var(--panel);
+  }
+  .result-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+    font-family: system-ui, sans-serif;
+  }
+  .result-card-header .name { font-family: Georgia, serif; font-size: 16px; font-weight: bold; }
+  .result-card-header .tag {
+    font-size: 11px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+    font-family: system-ui, sans-serif;
+  }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-family: 'Courier New', monospace; font-size: 17px; margin-top: 2px; }
+  footer {
+    margin-top: 40px;
+    font-family: system-ui, sans-serif;
+    font-size: 12px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Goal-Based Funding Calculator</h1>
+<p class="subtitle">Enter your goals below, then run the simulation to see your risk-adjusted chances of hitting each one. Built for people who plan their own money instead of relying on an advisor.</p>
+
+<div id="goals-list"></div>
+<button class="secondary" id="add-goal">+ Add another goal</button>
+
+<div id="available-savings-block">
+  <label for="available-savings">Total you can save each month, across all goals ($)</label>
+  <p class="field-help">This is your real-world budget ceiling — what you can actually set aside every month, split across every goal below.</p>
+  <input type="number" id="available-savings" value="800" min="0" style="max-width: 200px;">
+</div>
+
+<button class="primary" id="run-sim">Run simulation</button>
+
+<div id="results">
+  <div id="tradeoff-banner"></div>
+  <div id="result-cards"></div>
+</div>
+
+<footer>
+  Assumptions: goals under 5 years use a conservative profile (4% expected return, 5% volatility); 5&ndash;15 years use moderate (6%, 10%); 15+ years use aggressive (8%, 15%). Inflation is assumed at 3%/year. Each goal is run through 800 randomized simulations to estimate the probability of reaching its inflation-adjusted target. This tool is for education and planning conversations only &mdash; it is not financial or legal advice.
+</footer>
+
+<script>
+const RISK = [
+  { max: 5, name: 'Conservative', r: 0.04, sigma: 0.05 },
+  { max: 15, name: 'Moderate', r: 0.06, sigma: 0.10 },
+  { max: Infinity, name: 'Aggressive', r: 0.08, sigma: 0.15 }
+];
+const INFLATION = 0.03;
+const TRIALS = 800;
+
+let goalCount = 0;
+const goalsList = document.getElementById('goals-list');
+
+function riskFor(years) {
+  return RISK.find(b => years <= b.max);
+}
+
+function addGoal(preset) {
+  goalCount++;
+  const div = document.createElement('div');
+  div.className = 'goal-row';
+  div.innerHTML = `
+    <div class="goal-row-header">
+      <input type="text" class="g-name" value="${preset.name}">
+      <button class="g-remove">Remove</button>
+    </div>
+    <div class="field-grid">
+      <div>
+        <label>Target amount (today's dollars)</label>
+        <p class="field-help">What this goal costs today. We'll adjust for inflation automatically.</p>
+        <input type="number" class="g-target" value="${preset.target}" min="0">
+      </div>
+      <div>
+        <label>Years away</label>
+        <p class="field-help">How long until you need the money. This sets the risk level automatically.</p>
+        <input type="number" class="g-years" value="${preset.years}" min="1">
+      </div>
+      <div>
+        <label>Already saved</label>
+        <p class="field-help">What you've set aside for this goal so far.</p>
+        <input type="number" class="g-current" value="${preset.current}" min="0">
+      </div>
+      <div>
+        <label>Monthly contribution</label>
+        <p class="field-help">What you plan to add toward this goal every month.</p>
+        <input type="number" class="g-monthly" value="${preset.monthly}" min="0">
+      </div>
+    </div>
+  `;
+  goalsList.appendChild(div);
+  div.querySelector('.g-remove').addEventListener('click', () => div.remove());
+}
+
+document.getElementById('add-goal').addEventListener('click', () => {
+  addGoal({ name: 'New goal', target: 20000, years: 10, current: 0, monthly: 100 });
+});
+
+addGoal({ name: 'House down payment', target: 30000, years: 4, current: 5000, monthly: 300 });
+addGoal({ name: 'Retirement', target: 500000, years: 30, current: 2000, monthly: 250 });
+
+function randNormal(mean, sigma) {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  const z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  return mean + z * sigma;
+}
+
+function simulateGoal(current, monthly, years, target) {
+  const risk = riskFor(years);
+  const inflatedTarget = target * Math.pow(1 + INFLATION, years);
+  const annualContribution = monthly * 12;
+  let hits = 0;
+  const finals = [];
+  for (let t = 0; t < TRIALS; t++) {
+    let balance = current;
+    for (let y = 0; y < years; y++) {
+      const ret = randNormal(risk.r, risk.sigma);
+      balance = balance * (1 + ret) + annualContribution;
+    }
+    finals.push(balance);
+    if (balance >= inflatedTarget) hits++;
+  }
+  finals.sort((a, b) => a - b);
+  const median = finals[Math.floor(finals.length / 2)];
+  const probability = Math.round((hits / TRIALS) * 100);
+  return { risk, inflatedTarget, median, probability };
+}
+
+document.getElementById('run-sim').addEventListener('click', () => {
+  const rows = document.querySelectorAll('.goal-row');
+  const goals = [];
+  rows.forEach(row => {
+    goals.push({
+      name: row.querySelector('.g-name').value || 'Goal',
+      target: parseFloat(row.querySelector('.g-target').value) || 0,
+      years: parseFloat(row.querySelector('.g-years').value) || 1,
+      current: parseFloat(row.querySelector('.g-current').value) || 0,
+      monthly: parseFloat(row.querySelector('.g-monthly').value) || 0
+    });
+  });
+
+  const available = parseFloat(document.getElementById('available-savings').value) || 0;
+  const totalMonthly = goals.reduce((s, g) => s + g.monthly, 0);
+
+  const resultsDiv = document.getElementById('results');
+  const cardsDiv = document.getElementById('result-cards');
+  const banner = document.getElementById('tradeoff-banner');
+  cardsDiv.innerHTML = '';
+  resultsDiv.style.display = 'block';
+
+  if (totalMonthly > available) {
+    banner.style.background = 'rgba(214,138,60,0.15)';
+    banner.style.color = '#D68A3C';
+    banner.style.border = '1px solid #D68A3C';
+    banner.innerHTML = `You've committed $${totalMonthly.toLocaleString()}/mo across goals, but only have $${available.toLocaleString()}/mo available. Something needs to give: save more, extend a deadline, or lower a target.`;
+  } else {
+    banner.style.background = 'rgba(76,154,106,0.15)';
+    banner.style.color = '#4C9A6A';
+    banner.style.border = '1px solid #4C9A6A';
+    banner.innerHTML = `Your goals need $${totalMonthly.toLocaleString()}/mo, and you have $${available.toLocaleString()}/mo available. $${(available - totalMonthly).toLocaleString()}/mo left over.`;
+  }
+
+  goals.forEach(g => {
+    const res = simulateGoal(g.current, g.monthly, g.years, g.target);
+    const card = document.createElement('div');
+    card.className = 'result-card';
+    const probColor = res.probability >= 70 ? '#4C9A6A' : res.probability >= 40 ? '#D68A3C' : '#B5544A';
+    card.innerHTML = `
+      <div class="result-card-header">
+        <span class="name">${g.name}</span>
+        <span class="tag">${res.risk.name} &middot; ${g.years}yr</span>
+      </div>
+      <div class="stat-grid">
+        <div>
+          <div class="stat-label">Target (inflation-adjusted)</div>
+          <div class="stat-value">$${Math.round(res.inflatedTarget).toLocaleString()}</div>
+        </div>
+        <div>
+          <div class="stat-label">Median projected value</div>
+          <div class="stat-value">$${Math.round(res.median).toLocaleString()}</div>
+        </div>
+        <div>
+          <div class="stat-label">Chance of hitting target</div>
+          <div class="stat-value" style="color:${probColor};">${res.probability}%</div>
+          <div class="prob-bar-track"><div class="prob-bar-fill" style="width:${res.probability}%; background:${probColor};"></div></div>
+        </div>
+      </div>
+    `;
+    cardsDiv.appendChild(card);
+  });
+});
+</script>
+
+</body>
+</html>
